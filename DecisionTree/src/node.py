@@ -32,11 +32,12 @@ class Node(object):
         delim = "  " * (self.depth + 1)
         if len(self.children) > 0:
             if self.depth == 0:
-                return (self.name + ": (freqVal: %s) (depth: %d)\n"  % (self.mostFrequentAttrVal, self.depth) +
-                     delim + ("\n%s" % delim).join([x.ToString() for x in self.children]))
+                return (self.name, ": (freqVal: %s) (depth: %d)\n"  % (self.mostFrequentAttrVal, self.depth),
+                     delim, ("\n%s" % delim).join([x.ToString() for x in self.children]))
             else:
-                return (self.parent_attr_val + ("\n%s" % delim) + self.name + ": (freqVal: %s) (depth: %d)\n"  % (self.mostFrequentAttrVal, self.depth) +
-                     delim + ("\n%s" % delim).join([x.ToString() for x in self.children]))
+                return (self.parent_attr_val, ("\n%s" % delim), self.name, ": (freqVal: %s) (depth: %d)\n"  % 
+                        (self.mostFrequentAttrVal, self.depth),
+                     delim, ("\n%s" % delim).join([x.ToString() for x in self.children]))
         else:
-            return self.parent_attr_val + ("\n%s" % delim) + self.name + " = " + self.targetVal
+            return self.parent_attr_val, ("\n%s" % delim), self.name, " = ", self.targetVal
         

@@ -13,10 +13,22 @@ def main():
     
     sample_target_attr_name = 'play'
     target_attr_name = 'Class'
-    dataset = Dataset(sample_data_filepath, sample_target_attr_name)
-    #dataset = Dataset(training_data_filepath, target_attr_name)
+    
+    #dataset = Dataset(sample_data_filepath, sample_target_attr_name)
+    
+    print "Reading input data..."
+    dataset = Dataset(training_data_filepath, target_attr_name)
+    
+    print "Successfully parsed training data.\nPreprocessing training data..."
+    dataset.preprocess()
+    
+    print "Preprocessing done. Handled missing values."
     dtree = Tree()
-    dtree.learn(dataset, 0.0, 0.1)
-
+    
+    print "Learning tree by fitting data..."
+    dtree.learn(dataset, 0.0)
+    
+    print "Tree building successful."
+    
 if __name__ == "__main__":
     main()
