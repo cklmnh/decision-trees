@@ -24,5 +24,5 @@ class Attribute(object):
         """
         Convert attribute to string representation
         """
-        return self.name + ": " + ', '.join(self.values)
+        return "%s (%d): " % (self.name, self.idx), ' '.join(self.values)
     
