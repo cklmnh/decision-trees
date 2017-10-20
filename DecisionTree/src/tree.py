@@ -35,7 +35,7 @@ class Tree(object):
     def classify(self, test_instances, target_attr):
         predicted_vals = []
         actual_vals = []
-        for instance in test_instances[:2]:
+        for instance in test_instances:
             predicted_val, actual_val = getTargetVal(self.tree, instance, target_attr), instance[target_attr.idx]
             predicted_vals.append(predicted_val)
             actual_vals.append(actual_val)

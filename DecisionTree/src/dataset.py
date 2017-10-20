@@ -5,6 +5,7 @@ Created on Oct 15, 2017
 '''
 
 import arff
+import random
 from attribute import Attribute
 
 class Dataset(object):
@@ -31,8 +32,33 @@ class Dataset(object):
                 else: 
                     self.attributes.append(attribute)
         
+        self.handleClassImbalance()
+        
     def printInstances(self):
         for instance in self.instances:
             print ', '.join(map(str, instance[:]))
         
         print "\n\n"
+
+    def handleClassImbalance(self):
+        class_dict = {}
+        for instance in self.instances:
+            target_val = instance[self.target_attr.idx]
+            if target_val in class_dict:
+                class_dict[target_val].append(instance)
+            else:
+                class_dict[target_val] = [instance]
+        
+        class_percentages = {}
+        for target_val in self.target_attr.values:
+            if target_val in class_dict:
+                class_percentages[target_val] = len(class_dict[target_val])/float(len(self.instances))
+            else:
+                class_percentages[target_val] = 0.0     
+         
+        self.instances = []
+        self.instances.extend(class_dict[self.target_attr.values[0]])  
+        neg_samples = class_dict[self.target_attr.values[1]]
+        self.instances.extend(random.sample(neg_samples, len(neg_samples)/2))
+        
+        print len(self.instances)

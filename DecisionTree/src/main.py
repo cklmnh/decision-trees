@@ -61,8 +61,6 @@ def main():
         print "\nAccuracy: %.6f, Precision: %.6f, Recall: %.6f" % (accuracy, precision, recall)
         
         print "\n", "==" * 50, "\n"
-   
-
 '''
 Computes the confusion matrix from the predicted and actual class labels.
 
