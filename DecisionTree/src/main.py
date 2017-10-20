@@ -20,7 +20,7 @@ def main():
     target_attr_name = 'Class'
     
     #confidence_values = [0, 0.5, 0.8, 0.9, 0.95, 0.99]
-    confidence_values = [0.0, 0.99]
+    confidence_values = [0.99]
     for confidence in confidence_values:
         print "Confidence value: %.2f\n" % confidence
         start = time.clock()
@@ -35,7 +35,7 @@ def main():
         dtree.learn(dataset, confidence)
         print "Tree building successful in %.3fs." % (time.clock() - start)
         
-        print "\nPrinting tree..\n\n", dtree.tree.ToString(), "\n"
+        #print "\nPrinting tree..\n\n", dtree.tree.ToString(), "\n"
         
         print "Reading test data.."
         start = time.clock()
@@ -52,10 +52,10 @@ def main():
         
         true_pos, false_pos, true_neg, false_neg, misclassified = getConfusionMatrix(predicted_values, actual_values, dataset.target_attr.values[0])
         accuracy = (true_pos + true_neg)/(len(test_instances))
-        precision = true_pos/(true_pos + false_pos)
-        recall = true_pos/(true_pos + false_neg)
+        precision = 0 if true_pos == 0 else true_pos/(true_pos + false_pos)
+        recall = 0 if true_pos == 0 else true_pos/(true_pos + false_neg)
         
-        print "\nList of misclassified instance numbers:\n", misclassified, "\n"
+        #print "\nList of misclassified instance numbers:\n", misclassified, "\n"
         print "True positives: %.0f False positives: %.0f" % (true_pos, false_pos)
         print "False negatives: %.0f True negatives: %.0f" % (false_neg, true_neg)
         print "\nAccuracy: %.6f, Precision: %.6f, Recall: %.6f" % (accuracy, precision, recall)

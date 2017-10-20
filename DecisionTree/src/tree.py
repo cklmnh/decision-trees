@@ -9,7 +9,6 @@ from copy import deepcopy
 from node import Node
 from scipy.stats import chi2
 import node
-from lib2to3.fixer_util import Attr
 
 class Tree(object):
     '''
@@ -36,7 +35,7 @@ class Tree(object):
     def classify(self, test_instances, target_attr):
         predicted_vals = []
         actual_vals = []
-        for instance in test_instances:
+        for instance in test_instances[:2]:
             predicted_val, actual_val = getTargetVal(self.tree, instance, target_attr), instance[target_attr.idx]
             predicted_vals.append(predicted_val)
             actual_vals.append(actual_val)
@@ -56,6 +55,7 @@ def getTargetVal(node, test_instance, target_attr):
     else:
         instance_attr_val = test_instance[node.attr.idx]
         if instance_attr_val is None:
+            #print node.attr.name, node.mostFrequentAttrVal
             instance_attr_val = node.mostFrequentAttrVal
             
         for child_node in node.children:
@@ -207,8 +207,8 @@ def getBestAttributeAndMostFreqAttrVal(instances, attributes, confidence, target
     if chisquare > threshold:
         #print "Pass: best_attr: %s, chi-sq: %.3f, threshold: %.3f" % (best_attr.name, chisquare, threshold)
         return best_attr, best_attr_freq_val
-    else:
-        print "Fail: best_attr: %s, chi-sq: %.3f, threshold: %.3f" % (best_attr.name, chisquare, threshold)
+    #else:
+    #   print "Fail: best_attr: %s, chi-sq: %.3f, threshold: %.3f" % (best_attr.name, chisquare, threshold)
         
     #Return None if no attribute satisfies the chi-square threshold.
     return None, None
