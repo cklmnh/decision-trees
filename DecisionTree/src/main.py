@@ -19,7 +19,8 @@ def main():
     sample_target_attr_name = 'play'
     target_attr_name = 'Class'
     
-    confidence_values = [0, 0.5, 0.8, 0.9, 0.95, 0.99]
+    #confidence_values = [0, 0.5, 0.8, 0.9, 0.95, 0.99]
+    confidence_values = [0.0, 0.99]
     for confidence in confidence_values:
         print "Confidence value: %.2f\n" % confidence
         start = time.clock()

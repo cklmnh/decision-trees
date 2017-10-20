@@ -5,9 +5,11 @@ Created on Oct 15, 2017
 '''
 
 import math
+from copy import deepcopy
 from node import Node
 from scipy.stats import chi2
 import node
+from lib2to3.fixer_util import Attr
 
 class Tree(object):
     '''
@@ -17,14 +19,12 @@ class Tree(object):
     tree = {}
     
     '''
-    Learns the decision tree by fitting the training the data.
+    Learns the decision tree by fitting the training data.
     @param dataset: Training dataset
     @param confidence: Confidence value for chi-square threshold.
     '''
     def learn(self, dataset, confidence):
-        preprocessed_input = replaceMissingValues(dataset.instances[:], dataset.attributes, dataset.target_attr)
-        majority_class = majorityAttrVal([instance[dataset.target_attr.idx] for instance in preprocessed_input])
-        self.tree = buildTree(preprocessed_input, dataset.attributes, confidence, dataset.target_attr, majority_class)
+        self.tree = buildTree(dataset.instances, dataset.attributes, dataset.target_attr, confidence)
     
     '''
     Classifies the given set of test_instances.
@@ -37,7 +37,7 @@ class Tree(object):
         predicted_vals = []
         actual_vals = []
         for instance in test_instances:
-            predicted_val, actual_val = getTargetVal(self.tree, instance), instance[target_attr.idx]
+            predicted_val, actual_val = getTargetVal(self.tree, instance, target_attr), instance[target_attr.idx]
             predicted_vals.append(predicted_val)
             actual_vals.append(actual_val)
         
@@ -50,8 +50,8 @@ Method to classify the test_instance and return the class label.
 
 @return: Class label for the given test instance.
 '''      
-def getTargetVal(node, test_instance):
-    if node.isLeaf:
+def getTargetVal(node, test_instance, target_attr):
+    if node.attr.idx == target_attr.idx:
         return node.targetVal
     else:
         instance_attr_val = test_instance[node.attr.idx]
@@ -60,7 +60,7 @@ def getTargetVal(node, test_instance):
             
         for child_node in node.children:
             if child_node.parent_attr_val == instance_attr_val:
-                return getTargetVal(child_node, test_instance)
+                return getTargetVal(child_node, test_instance, target_attr)
 
 '''
 Builds the decision tree recursively by learning the best attribute at each node.
@@ -69,33 +69,52 @@ Builds the decision tree recursively by learning the best attribute at each node
 @param attributes: List of attributes considered for computing best attribute at the node.
 @param confidence: Confidence factor used for computing the chi square threshold
 @param target_attr: Target attribute in the data set.
-@param most_freq_class: Most frequent class among the set of given instances.
-@param parent_attr_val: Parent node's attribute value which created this node.
+@param parent_attr_val: Parent node's attribute value which leads to this node.
 @param depth: Depth of the node in the tree.
 
 @return: Returns the root node of the decision tree.
 ''' 
-def buildTree (instances, attributes, confidence, target_attr, most_freq_class, parent_attr_val = '', depth = 0):
-    if len(instances) == 0:
-        return Node(target_attr, [], most_freq_class, most_freq_class, parent_attr_val, depth)
+def buildTree (instances, attributes, target_attr, confidence, parent_attr_val = '', depth = 0): 
     
-    initial_entropy, most_freq_class = getEntropyAndMostFreqTargetVal(instances, target_attr)
-    if initial_entropy == 0.0:
-        return Node(target_attr, [], most_freq_class, most_freq_class, parent_attr_val, depth)
+    initial_entropy, most_freq_class = getInitialEntropyAndMostFreqTargetVal(instances, target_attr)
+    
+    #If initial entropy is 0 (pure node) or if attributes list is empty, then return a node with the target value as the most_freq_class
+    if initial_entropy == 0.0 or len(attributes) == 0:
+        return Node(target_attr, most_freq_class, most_freq_class, parent_attr_val, depth)
     else:
-        best_attr, freq_val = getBestAttributeAndMostFreqAttrVal(instances, attributes, confidence, target_attr, initial_entropy)
+        instances_with_missing_vals = deepcopy(instances)
+        replaceMissingValues(instances_with_missing_vals, attributes, target_attr)
+        best_attr, freq_val = getBestAttributeAndMostFreqAttrVal(instances_with_missing_vals, attributes, confidence, target_attr, initial_entropy)
         if best_attr is not None:
             print "Best attribute at depth %d: %s" % (depth, best_attr.name)
-            new_attributes = attributes[:]
-            new_attributes.remove(best_attr)
-            node = Node(best_attr, [], freq_val, most_freq_class, parent_attr_val, depth)
+            attributes.remove(best_attr)
+            
+            #Create node with the best attribute
+            node = Node(best_attr, freq_val, most_freq_class, parent_attr_val, depth)
+            
+            #Create child node for each of the best attribute values
             for attr_val in best_attr.values:
-                subset = [instance for instance in instances if instance[best_attr.idx] == attr_val]
-                subset_with_missing_vals = replaceMissingValues(subset[:], new_attributes, target_attr)
-                node.children.append(buildTree(subset_with_missing_vals, new_attributes, confidence, target_attr, most_freq_class, attr_val, depth + 1))
+                instances_subset = []
+                
+                #Get the list of instances with this attribute value
+                for idx in range(len(instances_with_missing_vals)):
+                    if instances_with_missing_vals[idx][best_attr.idx] == attr_val:
+                        
+                        #Add the corresponding instance with missing values to the instances_subset
+                        instances_subset.append(instances[idx])   
+                
+                #If there are no instances at this node, return a leaf node with the most_freq_class value from its parent node
+                if len(instances_subset) == 0:
+                    return Node(target_attr, most_freq_class, most_freq_class, parent_attr_val, depth)
+                #Recursively build the subtree for the child node
+                else:
+                    node.children.append(buildTree(deepcopy(instances_subset), deepcopy(attributes), target_attr, confidence, attr_val, depth + 1))
+                    
             return node
+        
+        #If no best attribute is found, return a leaf node with target value as the most frequent class label
         else:
-            return Node(target_attr, [], most_freq_class, most_freq_class, parent_attr_val, depth)
+            return Node(target_attr, most_freq_class, most_freq_class, parent_attr_val, depth)
 
 '''
 Replaces the missing values in the given set of training instances
@@ -108,19 +127,35 @@ Replaces the missing values in the given set of training instances
 ''' 
 def replaceMissingValues(instances, attributes, target_attr):
     for target_attr_val in target_attr.values:
+        
+        #Get subset of instances with target value == target_attr_val
         subset = [instance for instance in instances if instance[target_attr.idx] == target_attr_val]
         if len(subset) > 0:
             missing_attr_val = {}
+            indices_of_attrs_to_remove = []
             for attr in attributes:
-                all_values = [instance[attr.idx] for instance in subset]
-                missing_attr_val[attr.idx] = majorityAttrVal(all_values)
+                all_values_in_subset = [instance[attr.idx] for instance in subset]
+                majority_val = majorityAttrVal(all_values_in_subset)
+                if majority_val is not None: 
+                    missing_attr_val[attr.idx] = majority_val
+                else:
+                    #print "All values are missing in the subset for attribute: %s" % attr.name
+                    all_values = [instance[attr.idx] for instance in instances]
+                    majority_val = majorityAttrVal(all_values)
+                    if majority_val is not None:
+                        missing_attr_val[attr.idx] = majority_val
+                    else:
+                        #print "All values are missing in the entire set of instances for attribute: %s" % attr.name
+                        #Add the attribute's index to list of indices_of_attrs_to_remove as all the values are missing for this attribute
+                        indices_of_attrs_to_remove.append(attr.idx)
+            
+            #Filter out attributes with all values missing
+            attributes = [attr for attr in attributes if not (attr.idx in indices_of_attrs_to_remove)]
             
             for instance in subset:
                 for idx, attr_val in enumerate(instance):
-                    if attr_val is None:
+                    if (idx in missing_attr_val) and (attr_val is None):
                         instance[idx] = missing_attr_val[idx]
-    
-    return instances
  
 '''
 Finds the majority attribute value among the list of values
@@ -170,9 +205,10 @@ def getBestAttributeAndMostFreqAttrVal(instances, attributes, confidence, target
     threshold = chi2.isf(1 - confidence, len(best_attr.values) - 1)
     chisquare = getChiSquareValue(instances, best_attr, target_attr)
     if chisquare > threshold:
+        #print "Pass: best_attr: %s, chi-sq: %.3f, threshold: %.3f" % (best_attr.name, chisquare, threshold)
         return best_attr, best_attr_freq_val
     else:
-        print "best_attr: %s, chi-sq: %.3f, threshold: %.3f" % (best_attr.name, chisquare, threshold)
+        print "Fail: best_attr: %s, chi-sq: %.3f, threshold: %.3f" % (best_attr.name, chisquare, threshold)
         
     #Return None if no attribute satisfies the chi-square threshold.
     return None, None
@@ -254,7 +290,7 @@ Computes the class entropy and the most frequency class value for the given set 
 
 @return: Tuple containing class entropy and most frequent class value.
 '''
-def getEntropyAndMostFreqTargetVal(instances, target_attr):
+def getInitialEntropyAndMostFreqTargetVal(instances, target_attr):
     class_freq = {}
     highest_freq = 0.0
     most_freq_target_val = target_attr.values[0]

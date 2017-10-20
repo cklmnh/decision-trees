@@ -10,30 +10,27 @@ class Node(object):
     
     Attributes:
         attr: Represents the attribute that forms the node.
-        children: List of child nodes.
         targetVal: Target value of the class if this is a leaf node.
         mostFrequentAttrVal: Most frequent value of the attribute based on training instances at this node.
-        depth: Depth of the node in the tree. Depth of root is 0.
         parent_attr_val: Indicating the value of its parent attribute that created this node.
-        isLeaf: Indicates if it's a leaf node.
+        depth: Depth of the node in the tree. Depth of root is 0.
     '''
     
     
-    def __init__(self, attr, children, mostFrequentAttrVal, targetVal, parent_attr_val, depth):
+    def __init__(self, attr, mostFrequentAttrVal, targetVal, parent_attr_val, depth):
         self.attr = attr
-        self.children = children
         self.mostFrequentAttrVal = mostFrequentAttrVal
         self.targetVal = targetVal
         self.parent_attr_val = parent_attr_val
         self.depth = depth
-        self.isLeaf = self.targetVal == self.mostFrequentAttrVal
+        self.children = []
         
     def ToString(self):
         """
         Convert attribute to string representation
         """
         delim = "  " * (self.depth + 1)
-        if self.isLeaf:
+        if len(self.children) == 0:
             return self.parent_attr_val + ("\n%s" % delim) + "%s = %s" % (self.attr.name, self.targetVal)
         else:
             if self.depth == 0:
