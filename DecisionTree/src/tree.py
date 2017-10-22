@@ -8,7 +8,7 @@ import math
 from copy import deepcopy
 from node import Node
 from scipy.stats import chi2
-from collections import Counter
+from matplotlib.font_manager import path
 
 class Tree(object):
     '''
@@ -16,6 +16,7 @@ class Tree(object):
     '''
 
     tree = {}
+    decision_nodes_count = 0
     
     '''
     Learns the decision tree by fitting the training data.
@@ -24,6 +25,7 @@ class Tree(object):
     '''
     def learn(self, dataset, confidence):
         self.tree = buildTree(dataset.instances, dataset.attributes, dataset.target_attr, confidence)
+        self.decision_nodes_count = Tree.decision_nodes_count
     
     '''
     Classifies the given set of test_instances.
@@ -35,24 +37,35 @@ class Tree(object):
     def classify(self, test_instances, target_attr):
         predicted_vals = []
         actual_vals = []
+        positive_len4_paths = []
+        negative_len4_paths = []
         for instance in test_instances:
             actual_vals.append(instance[target_attr.idx])
-            predicted_val = getTargetVal(self.tree, instance, target_attr) 
+            path = []
+            predicted_val = getTargetVal(self.tree, instance, target_attr, path)
+            if predicted_val == target_attr.values[0]:
+                positive_len4_paths.append(', '.join(path))
+            else:
+                negative_len4_paths.append(', '.join(path)) 
             predicted_vals.append(predicted_val)
         
-        return predicted_vals, actual_vals
+        return predicted_vals, actual_vals, positive_len4_paths, negative_len4_paths
 
 '''
 Method to classify the test_instance and return the class label.
 
 @param test_instance: test instance.
-
+@param target_attr: target attribute to predict.
+@param path: decision path taken by the instance
+  
 @return: Class label for the given test instance.
 '''      
-def getTargetVal(node, test_instance, target_attr):
+def getTargetVal(node, test_instance, target_attr, path):
     if node.attr.idx == target_attr.idx:
         return node.target_val
     else:
+        if len(path) < 4:
+            path.append(node.attr.name)
         instance_attr_val = test_instance[node.attr.idx]
         if instance_attr_val is None:
             #print node.attr.name, node.most_freq_attr_val
@@ -60,7 +73,7 @@ def getTargetVal(node, test_instance, target_attr):
             
         for child_node in node.children:
             if child_node.parent_attr_val == instance_attr_val:
-                return getTargetVal(child_node, test_instance, target_attr)
+                return getTargetVal(child_node, test_instance, target_attr, path)
 
 '''
 Builds the decision tree recursively by learning the best attribute at each node.
@@ -74,7 +87,7 @@ Builds the decision tree recursively by learning the best attribute at each node
 
 @return: Returns the root node of the decision tree.
 ''' 
-def buildTree (instances, attributes, target_attr, confidence, parent_attr_val = '', depth = 0): 
+def buildTree(instances, attributes, target_attr, confidence, parent_attr_val = '', depth = 0): 
     
     initial_entropy, most_freq_class = getInitialEntropyAndMostFreqTargetVal(instances, target_attr)
     
@@ -86,12 +99,10 @@ def buildTree (instances, attributes, target_attr, confidence, parent_attr_val =
         #relevant_attributes = replaceMissingValuesAndGetRevelantAttributes(instances_with_missing_vals, attributes, target_attr)
         relevant_attributes = replaceMissingValuesWithMostFreqValAndGetRevelantAttributes(instances_with_missing_vals, attributes)
         
-        #for attr in relevant_attributes:
-        #    print attr.name, Counter([instance[attr.idx] for instance in instances_with_missing_vals]).most_common()
-        
-        best_attr, freq_val = getBestAttributeAndMostFreqAttrVal(instances_with_missing_vals, relevant_attributes, confidence, target_attr, initial_entropy)
+        best_attr, freq_val = getBestAttributeAndMostFreqAttrVal(instances_with_missing_vals, relevant_attributes, confidence, target_attr, initial_entropy, depth)
         if best_attr is not None:
-            print "Best attribute at depth %d: %s" % (depth, best_attr.name)
+            Tree.decision_nodes_count += 1
+            #print "Best attribute at depth %d: %s" % (depth, best_attr.name)
             relevant_attributes.remove(best_attr)
             
             #Create node with the best attribute
@@ -229,10 +240,11 @@ Finds the best attribute and its most frequent value at the node for the list of
 @param attr: Attribute for which the gain ratio is computed. 
 @param target_attr: Target attribute in the data set.
 @param initial_entropy: Initial class entropy of the instances. 
-
+@param depth: Depth of the tree at which we are choosing best attribute
+ 
 @return: Tuple containing the attribute's gain ratio and the most frequent attribute value at that node.
 '''        
-def getBestAttributeAndMostFreqAttrVal(instances, attributes, confidence, target_attr, initial_entropy):
+def getBestAttributeAndMostFreqAttrVal(instances, attributes, confidence, target_attr, initial_entropy, depth):
     max_gain = 0.0
     best_attr = None
     best_attr_freq_val = None
@@ -243,13 +255,13 @@ def getBestAttributeAndMostFreqAttrVal(instances, attributes, confidence, target
         threshold = chi2.isf(1 - confidence, len(attr.values) - 1)
         chisquare = getChiSquareValue(instances, attr, target_attr)
         
-        # Test if the attribute passes chisquare test
+        #Test if the attribute passes chisquare test
         if chisquare > threshold:
             
             #print "Pass: attr: %s, chi-sq: %.3f, threshold: %.3f" % (attr.name, chisquare, threshold)
             gain_ratio, freq_val = getGainRatioAndMostFrequentAttrVal(instances, attr, target_attr, initial_entropy)
-            
-            # Test if the attribute has the highest gain ratio
+            #print attr.name, gain_ratio
+            #Test if the attribute has the highest gain ratio
             if gain_ratio > max_gain:
                 best_attr = attr
                 best_attr_freq_val = freq_val
@@ -260,8 +272,8 @@ def getBestAttributeAndMostFreqAttrVal(instances, attributes, confidence, target
             #print "Fail: attr: %s, chi-sq: %.3f, threshold: %.3f" % (attr.name, chisquare, threshold)
     
     if best_attr is not None:
-        print ("Best attr: %s, chi-sq: %.3f, threshold: %.3f, gain ratio: %.3f, freq_val: %s" 
-               % (best_attr.name, best_attr_chisquare, best_attr_threshold, max_gain, best_attr_freq_val))
+        print ("Best attribute at depth %d: %s, chi-sq: %.3f, threshold: %.3f, gain ratio: %.3f, freq_val: %s" 
+               % (depth, best_attr.name, best_attr_chisquare, best_attr_threshold, max_gain, best_attr_freq_val))
         
     return best_attr, best_attr_freq_val
 
