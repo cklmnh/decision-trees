@@ -8,7 +8,6 @@ import math
 from copy import deepcopy
 from node import Node
 from scipy.stats import chi2
-from matplotlib.font_manager import path
 
 class Tree(object):
     '''
