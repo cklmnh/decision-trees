@@ -4,40 +4,52 @@ Created on Oct 15, 2017
 @author: surya
 '''
 
-import time
-import sys
-import arff
+import time, argparse, sys, arff, os
 from dataset import Dataset
 from tree import Tree
 from collections import Counter
 
 def main():
-    sample_data_filepath = '../weather_data.arff'
-    training_data_filepath = '../training_subsetD.arff'
     
-    test_data_filepath = '../testingD.arff'
+    parser = argparse.ArgumentParser()
     
-    sample_target_attr_name = 'play'
-    target_attr_name = 'Class'
+    parser.add_argument('--train', help ='Training set file path. Default: \'../training_subsetD.arff\'', type = str, default = '../training_subsetD.arff')
+    parser.add_argument('--test', help ='Test set file path. Default: \'../testingD.arff\'', type = str, default = '../testingD.arff')
+    parser.add_argument('--out', help = 'Output folder name. Default: Output', type = str, default = 'Output')
+    parser.add_argument('--conf', help ='List of confidence values to run. Default: 0,0.5,0.8,0.95,0.99', type = str, default = '0,0.5,0.8,0.95,0.99')
+    parser.add_argument('--mh', help = 'Missing values handling. 0 (Default) = Option 1 in class. 1 = Option 2 in class.', type = int, default = 0)
+    parser.add_argument('--null', help = 'Handle null values as missing values. 0 (Default) = False. 1 = True.', type = int, default = 0)
+    parser.add_argument('--cb', help = 'Do class balancing by under sampling. 0 (Default) = False. 1 = True.', type = int, default = 0)
+    parser.add_argument('--target', help = 'Target attribute name. Default = \'Class\'', type = str, default = 'Class')
     
-    confidence_values = [0, 0.5, 0.8, 0.95, 0.99]
-    #confidence_values = [0.0]
+    args = parser.parse_args()
+
+    training_data_filepath = args.train
+    test_data_filepath = args.test
+    output_folder = args.out
+    confidence_values = [float(val.strip()) for val in args.conf.split(',')]
+    missing_vals_handle_method = args.mh
+    handle_null_as_missing = args.null
+    do_class_balancing = args.cb
+    target_attr_name = args.target
+    
     for confidence in confidence_values:
-        output_file_name = "../HandleMissingValues_Method1/%.2f_result.txt" % confidence
-        output_file = open(output_file_name, 'w')
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
+        output_file_name = "%s/%.2f_result.txt" % (output_folder, confidence)
+        output_file = open(output_file_name, 'w+')
         sys.stdout = output_file
         
         print "Confidence value: %.2f\n" % confidence
         start = time.clock()
         print "Reading input data..."
-        #dataset = Dataset(sample_data_filepath, sample_target_attr_name)
-        dataset = Dataset(training_data_filepath, target_attr_name)
+        dataset = Dataset(training_data_filepath, target_attr_name, do_class_balancing)
         print "Successfully parsed training data in %.3fs." % (time.clock() - start)
         
         start = time.clock()
         dtree = Tree()
         print "Learning tree by fitting data...\n"
-        dtree.learn(dataset, confidence)
+        dtree.learn(dataset, confidence, missing_vals_handle_method, handle_null_as_missing)
         
         print "\nTree building successful in %.3fs." % (time.clock() - start)
         print "Number of decision nodes: %d" % dtree.decision_nodes_count
@@ -47,7 +59,6 @@ def main():
         
         print "\nReading test data from test set..."
         start = time.clock()
-        #test_data = arff.load(open(sample_data_filepath, 'rb'))
         test_data = arff.load(open(test_data_filepath, 'rb'))
         print "Successfully parsed test data in %.3fs." % (time.clock() - start)
         test_instances = test_data.get("data")
@@ -58,7 +69,6 @@ def main():
         
         print "\nReading test data from training set..."
         start = time.clock()
-        #test_data = arff.load(open(sample_data_filepath, 'rb'))
         test_data = arff.load(open(training_data_filepath, 'rb'))
         test_instances = test_data.get("data")
         print "Successfully parsed test data in %.3fs." % (time.clock() - start)
@@ -68,6 +78,7 @@ def main():
         print "\n", "=" * 120, "\n"
         
         output_file.close()
+        
 '''
 Classifies the given set of instances using the decision tree learned.
 

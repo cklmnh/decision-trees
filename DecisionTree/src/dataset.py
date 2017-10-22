@@ -17,7 +17,7 @@ class Dataset(object):
         target_attr: Target attribute to predict.
         instances: List of training instances.
     '''
-    def __init__(self, filepath, target_attr_name):
+    def __init__(self, filepath, target_attr_name, do_class_balancing):
         input_data = arff.load(open(filepath, 'rb'))
         self.instances = input_data.get("data")
         self.attributes = []
@@ -32,15 +32,12 @@ class Dataset(object):
                 else: 
                     self.attributes.append(attribute)
         
-        #print '\n'.join([attr.name for attr in self.attributes])
-        #self.handleClassImbalance()
-        
-    def printInstances(self):
-        for instance in self.instances:
-            print ', '.join(map(str, instance[:]))
-        
-        print "\n\n"
+        if (do_class_balancing == 1):
+            self.handleClassImbalance()
 
+    '''
+    Does class balancing by randomly sampling only 2/3rd of the majority target class instances.
+    '''
     def handleClassImbalance(self):
         class_dict = {}
         for instance in self.instances:
@@ -49,17 +46,8 @@ class Dataset(object):
                 class_dict[target_val].append(instance)
             else:
                 class_dict[target_val] = [instance]
-        
-        class_percentages = {}
-        for target_val in self.target_attr.values:
-            if target_val in class_dict:
-                class_percentages[target_val] = len(class_dict[target_val])/float(len(self.instances))
-            else:
-                class_percentages[target_val] = 0.0     
          
         self.instances = []
         self.instances.extend(class_dict[self.target_attr.values[0]])  
         neg_samples = class_dict[self.target_attr.values[1]]
-        self.instances.extend(random.sample(neg_samples, (int)(len(neg_samples)/3)))
-        
-        print len(self.instances)
+        self.instances.extend(random.sample(neg_samples, (int)((2.0*len(neg_samples)/3.0))))

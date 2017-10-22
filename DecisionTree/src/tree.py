@@ -16,13 +16,17 @@ class Tree(object):
 
     tree = {}
     decision_nodes_count = 0
+    missing_vals_handle_method = 0
+    handle_null_as_missing = 0
     
     '''
     Learns the decision tree by fitting the training data.
     @param dataset: Training dataset
     @param confidence: Confidence value for chi-square threshold.
     '''
-    def learn(self, dataset, confidence):
+    def learn(self, dataset, confidence, missing_vals_handle_method, handle_null_as_missing):
+        Tree.missing_vals_handle_method = missing_vals_handle_method
+        Tree.handle_null_as_missing = handle_null_as_missing
         self.tree = buildTree(dataset.instances, dataset.attributes, dataset.target_attr, confidence)
         self.decision_nodes_count = Tree.decision_nodes_count
     
@@ -95,8 +99,10 @@ def buildTree(instances, attributes, target_attr, confidence, parent_attr_val = 
         return Node(target_attr, most_freq_class, most_freq_class, parent_attr_val, depth)
     else:
         instances_with_missing_vals = deepcopy(instances)
-        #relevant_attributes = replaceMissingValuesAndGetRevelantAttributes(instances_with_missing_vals, attributes, target_attr)
-        relevant_attributes = replaceMissingValuesWithMostFreqValAndGetRevelantAttributes(instances_with_missing_vals, attributes)
+        if Tree.missing_vals_handle_method == 0:
+            relevant_attributes = replaceMissingValuesWithMostFreqValAndGetRevelantAttributes(instances_with_missing_vals, attributes)
+        else:
+            relevant_attributes = replaceMissingValuesAndGetRevelantAttributes(instances_with_missing_vals, attributes, target_attr)
         
         best_attr, freq_val = getBestAttributeAndMostFreqAttrVal(instances_with_missing_vals, relevant_attributes, confidence, target_attr, initial_entropy, depth)
         if best_attr is not None:
@@ -145,7 +151,7 @@ def replaceMissingValuesWithMostFreqValAndGetRevelantAttributes(instances, attri
     for attr in attributes:
         all_values = [instance[attr.idx] for instance in instances]
         majority_val = majorityAttrVal(all_values)
-        if majority_val is not None: 
+        if not isMissingValue(majority_val): 
             missing_attr_val[attr.idx] = majority_val
         else:
             #print "All values are missing in the entire set of instances for attribute: %s" % attr.name
@@ -154,7 +160,7 @@ def replaceMissingValuesWithMostFreqValAndGetRevelantAttributes(instances, attri
                 
     for instance in instances:
         for idx, attr_val in enumerate(instance):
-            if (attr_val is None) and idx in missing_attr_val:
+            if isMissingValue(attr_val) and idx in missing_attr_val:
                 instance[idx] = missing_attr_val[idx]
 
     #Filter out attributes with all values missing
@@ -184,13 +190,13 @@ def replaceMissingValuesAndGetRevelantAttributes(instances, attributes, target_a
             for attr in attributes:
                 all_values_in_subset = [instance[attr.idx] for instance in subset]
                 majority_val = majorityAttrVal(all_values_in_subset)
-                if majority_val is not None: 
+                if not isMissingValue(majority_val): 
                     missing_attr_val[attr.idx] = majority_val
                 else:
                     #print "All values are missing in the subset for attribute: %s" % attr.name
                     all_values = [instance[attr.idx] for instance in instances]
                     majority_val = majorityAttrVal(all_values)
-                    if majority_val is not None:
+                    if isMissingValue(majority_val):
                         missing_attr_val[attr.idx] = majority_val
                     #else:
                         #print "All values are missing in the entire set of instances for attribute: %s" % attr.name
@@ -199,7 +205,7 @@ def replaceMissingValuesAndGetRevelantAttributes(instances, attributes, target_a
             
             for instance in subset:
                 for idx, attr_val in enumerate(instance):
-                    if (attr_val is None) and idx in missing_attr_val:
+                    if isMissingValue(attr_val) and idx in missing_attr_val:
                         instance[idx] = missing_attr_val[idx]
 
     #Filter out attributes with all values missing
@@ -207,7 +213,16 @@ def replaceMissingValuesAndGetRevelantAttributes(instances, attributes, target_a
         return [attr for attr in attributes if not (attr.idx in attrs_to_remove)]
     else:
         return attributes
- 
+
+'''
+Determines if the attribute value is a missing value or not
+@param val: attribute value
+
+@return: True if the value is None or 'NULL' (if we consider NULL as missing value). Else, returns False.
+'''
+def isMissingValue(val):
+    return val is None or (Tree.handle_null_as_missing == 1 and val == 'NULL')
+
 '''
 Finds the majority attribute value among the list of values
 
@@ -220,7 +235,7 @@ def majorityAttrVal(values):
     highest_freq = 0
     most_freq_val = values[0]
     for val in values:
-        if val is not None:
+        if not isMissingValue(val):
             if val in freq:
                 freq[val] += 1.0
             else:
