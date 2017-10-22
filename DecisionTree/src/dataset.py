@@ -32,7 +32,8 @@ class Dataset(object):
                 else: 
                     self.attributes.append(attribute)
         
-        self.handleClassImbalance()
+        #print '\n'.join([attr.name for attr in self.attributes])
+        #self.handleClassImbalance()
         
     def printInstances(self):
         for instance in self.instances:
@@ -59,6 +60,6 @@ class Dataset(object):
         self.instances = []
         self.instances.extend(class_dict[self.target_attr.values[0]])  
         neg_samples = class_dict[self.target_attr.values[1]]
-        self.instances.extend(random.sample(neg_samples, len(neg_samples)/2))
+        self.instances.extend(random.sample(neg_samples, (int)(len(neg_samples)/3)))
         
         print len(self.instances)

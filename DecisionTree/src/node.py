@@ -17,10 +17,10 @@ class Node(object):
     '''
     
     
-    def __init__(self, attr, mostFrequentAttrVal, targetVal, parent_attr_val, depth):
+    def __init__(self, attr, most_freq_attr_val, target_val, parent_attr_val, depth):
         self.attr = attr
-        self.mostFrequentAttrVal = mostFrequentAttrVal
-        self.targetVal = targetVal
+        self.most_freq_attr_val = most_freq_attr_val
+        self.target_val = target_val
         self.parent_attr_val = parent_attr_val
         self.depth = depth
         self.children = []
@@ -31,7 +31,7 @@ class Node(object):
         """
         delim = "  " * (self.depth + 1)
         if len(self.children) == 0:
-            return self.parent_attr_val + ("\n%s" % delim) + "%s = %s" % (self.attr.name, self.targetVal)
+            return self.parent_attr_val + ("\n%s" % delim) + "%s (%d) = %s" % (self.attr.name, self.depth, self.target_val)
         else:
             if self.depth == 0:
                 return (self.attr.name + " (%d):\n"  % self.depth + delim + ("\n%s" % delim).join([x.ToString() for x in self.children]))
