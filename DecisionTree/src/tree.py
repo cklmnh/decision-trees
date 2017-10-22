@@ -27,6 +27,7 @@ class Tree(object):
     def learn(self, dataset, confidence, missing_vals_handle_method, handle_null_as_missing):
         Tree.missing_vals_handle_method = missing_vals_handle_method
         Tree.handle_null_as_missing = handle_null_as_missing
+        Tree.decision_nodes_count = 0
         self.tree = buildTree(dataset.instances, dataset.attributes, dataset.target_attr, confidence)
         self.decision_nodes_count = Tree.decision_nodes_count
     
@@ -67,9 +68,9 @@ def getTargetVal(node, test_instance, target_attr, path):
     if node.attr.idx == target_attr.idx:
         return node.target_val
     else:
-        if len(path) < 4:
-            path.append(node.attr.name)
         instance_attr_val = test_instance[node.attr.idx]
+        if len(path) < 4:
+            path.append("%s (%s)" % (node.attr.name, instance_attr_val))
         if instance_attr_val is None:
             #print node.attr.name, node.most_freq_attr_val
             instance_attr_val = node.most_freq_attr_val
