@@ -69,11 +69,12 @@ def getTargetVal(node, test_instance, target_attr, path):
         return node.target_val
     else:
         instance_attr_val = test_instance[node.attr.idx]
-        if len(path) < 4:
-            path.append("%s (%s)" % (node.attr.name, instance_attr_val))
         if instance_attr_val is None:
             #print node.attr.name, node.most_freq_attr_val
             instance_attr_val = node.most_freq_attr_val
+            
+        if len(path) < 4:
+            path.append("%s (%s)" % (node.attr.name, instance_attr_val))
             
         for child_node in node.children:
             if child_node.parent_attr_val == instance_attr_val:
